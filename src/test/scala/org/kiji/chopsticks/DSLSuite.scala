@@ -47,27 +47,27 @@ class DSLSuite extends FunSuite {
     val colReq: ColumnRequest = MapColumn("search", qualifierMatches=""".*\.com""")
 
     // TODO: Test it filters keyvalues correctly.
-    assert(colReq.inputOptions.filter.isInstanceOf[RegexQualifierColumnFilter])
+    assert(colReq.filter.isInstanceOf[RegexQualifierColumnFilter])
   }
 
   test("DSL should let you specify versions on maptype column without qualifier regex.") {
     val colReq: ColumnRequest = MapColumn("search", versions=2)
 
-    assert(colReq.inputOptions.maxVersions == 2)
+    assert(colReq.maxVersions == 2)
   }
 
   test("DSL should let you specify versions on a grouptype column.") {
     val colReq: ColumnRequest = Column("info:word", versions=3)
 
-    assert(colReq.inputOptions.maxVersions == 3)
+    assert(colReq.maxVersions == 3)
   }
 
   test("DSL should have default versions of 1 for maptype and grouptype columns.") {
     val colReq1: ColumnRequest = Column("info:word")
     val colReq2: ColumnRequest = MapColumn("searches")
 
-    assert(colReq1.inputOptions.maxVersions == 1)
-    assert(colReq2.inputOptions.maxVersions == 1)
+    assert(colReq1.maxVersions == 1)
+    assert(colReq2.maxVersions == 1)
   }
 
   test("DSL should let you create inputs and outputs with no mappings.") {

@@ -26,7 +26,6 @@ import java.io.ObjectOutputStream
 
 import org.scalatest.FunSuite
 
-import org.kiji.chopsticks.ColumnRequest.InputOptions
 import org.kiji.schema.filter.RegexQualifierColumnFilter
 
 class ColumnRequestSuite extends FunSuite {
@@ -35,19 +34,20 @@ class ColumnRequestSuite extends FunSuite {
   // Should be able to change the following line to:
   // def filter = new RegexQualifierColumnFilter(".*")
   val filter = new RegexQualifierColumnFilter(".*")
-  def opts: InputOptions = new InputOptions(1, filter)
+  val maxVersions = 1
   val colName = "myname"
 
   test("Fields of the column are the same as those it is constructed with.") {
-    val col: ColumnRequest = new ColumnRequest(colName, opts)
+    val col: ColumnRequest = new ColumnRequest(colName, maxVersions, filter)
 
     assert(colName == col.name)
-    assert(opts == col.inputOptions)
+    assert(maxVersions == col.maxVersions)
+    assert(filter == col.filter)
   }
 
   test("Two columns with the same parameters are equal and hash to the same value.") {
-    val col1: ColumnRequest = new ColumnRequest(colName, opts)
-    val col2: ColumnRequest = new ColumnRequest(colName, opts)
+    val col1: ColumnRequest = new ColumnRequest(colName, maxVersions, filter)
+    val col2: ColumnRequest = new ColumnRequest(colName, maxVersions, filter)
 
     assert(col1 == col2)
     assert(col1.hashCode() == col2.hashCode())
@@ -56,8 +56,8 @@ class ColumnRequestSuite extends FunSuite {
   test("A column must be serializable.") {
     // Serialize and deserialize using java ObjectInputStream and ObjectOutputStream.
     // TODO(CHOP-37): The filter is null because it's not serializable. Once CHOP-37 is
-    // done, use the same inputoptions as the other tests in the line below.
-    val col: ColumnRequest = new ColumnRequest(colName, new InputOptions(1, null))
+    // done, use the same request options as the other tests in the line below.
+    val col: ColumnRequest = new ColumnRequest(colName, maxVersions, null)
     val bytesOut = new ByteArrayOutputStream()
     val out = new ObjectOutputStream(bytesOut)
     out.writeObject(col)

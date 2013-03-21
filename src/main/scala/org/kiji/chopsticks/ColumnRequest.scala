@@ -23,33 +23,20 @@ import java.io.Serializable
 
 import org.kiji.annotations.ApiAudience
 import org.kiji.annotations.ApiStability
-import org.kiji.chopsticks.ColumnRequest.InputOptions
 import org.kiji.schema.filter.KijiColumnFilter
 
 /**
- * Represents a request for a column in a Kiji table.
+ * Holds column-level options used to request data from a particular column (or map-type column
+ * family) in a Kiji table.
  *
- * @param name The name of the column.
- * @param inputOptions Input options for requesting the column.
+ * @param name of the column (e.g., "family:qualifier") or map-type column family (e.g., "family").
+ * @param maxVersions of the column (or for columns in a map-type column family) to be retrieved
+ *     from Kiji.
+ * @param filter that column values retrieved from Kiji must satisfy.
  */
 @ApiAudience.Public
 @ApiStability.Unstable
 final case class ColumnRequest(
     name: String,
-    inputOptions: InputOptions = InputOptions())
-    extends Serializable
-
-object ColumnRequest {
-  /**
-   * Provides the ability to specify InputOptions for a column.
-   *
-   * @param maxVersions Max versions to return.
-   * @param KijiColumnFilter Filters columns to request.
-   */
-  @ApiAudience.Public
-  @ApiStability.Unstable
-  final case class InputOptions(
-        maxVersions: Int = 1,
-        filter: KijiColumnFilter = null) extends Serializable {
-  }
-}
+    maxVersions: Int = 1,
+    private[chopsticks] val filter: KijiColumnFilter = null) extends Serializable

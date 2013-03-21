@@ -308,11 +308,10 @@ object KijiScheme {
       columns: Iterable[ColumnRequest]): KijiDataRequest = {
     def addColumn(builder: KijiDataRequestBuilder, column: ColumnRequest) {
       val columnName: KijiColumnName = new KijiColumnName(column.name)
-      val inputOptions: ColumnRequest.InputOptions = column.inputOptions
 
       builder.newColumnsDef()
-          .withMaxVersions(inputOptions.maxVersions)
-          .withFilter(inputOptions.filter)
+          .withMaxVersions(column.maxVersions)
+          .withFilter(column.filter)
           .add(columnName)
     }
 

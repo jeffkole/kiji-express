@@ -63,7 +63,7 @@ object DSL {
       }
     }
 
-    new ColumnRequest(name, new ColumnRequest.InputOptions(versions, filter))
+    new ColumnRequest(name, versions, filter)
   }
 
   /**
@@ -77,7 +77,7 @@ object DSL {
       versions: Int = latest): ColumnRequest = {
     require(name.split(":").length == 2)
 
-    new ColumnRequest(name, new ColumnRequest.InputOptions(versions, null))
+    new ColumnRequest(name, versions, null)
   }
 
   /**
