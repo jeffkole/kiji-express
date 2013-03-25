@@ -27,7 +27,8 @@ import org.kiji.schema.filter.KijiColumnFilter
 import org.kiji.schema.filter.RegexQualifierColumnFilter
 
 /**
- * A factory for Scalding `Source`s capable of reading from or writing to a Kiji table.
+ * A factory for Scalding `Source`s capable of reading from or writing to a Kiji table. Factory
+ * methods are also included for creating column requests needed to create `Source`s.
  */
 @ApiAudience.Public
 @ApiStability.Unstable
@@ -36,13 +37,13 @@ object DSL {
    * Used to indicate that all versions of a column (or columns in a map-type column family) should
    * be read.
    */
-  val all = Integer.MAX_VALUE
+  val all: Int = Integer.MAX_VALUE
 
   /**
    * Used to indicate that only the latest version of a column (or columns in a map-type column
    * family) should be read.
    */
-  val latest = 1
+  val latest: Int = 1
 
   /**
    * Creates a request for a map-type column family from a Kiji table.
@@ -55,6 +56,7 @@ object DSL {
    *     match. Use the empty string (default) to match all qualifiers / retrieve all columns.
    * @param versions (maximum) of each column in the family to retrieve. The most recent versions
    *     are retrieved first.
+   * @return a new request, with the specified parameters, for the map-type column family.
    */
   def MapColumn(
       name: String,
@@ -74,10 +76,12 @@ object DSL {
   }
 
   /**
-   * Factory method for Column that is a group-type column.
+   * Creates a request for a column from a Kiji table.
    *
-   * @param name of column in "family:qualifier" form.
-   * @param versions of column to get.
+   * @param name of the column requested, which should be of the form "family:qualifier".
+   * @param versions (maximum) of the column to retrieve. The most recent versions are retrieved
+   *     first. By default, only the latest version is retrieved.
+   * @return a new request, with the specified parameters, for the column.
    */
   def Column(
       name: String,
@@ -88,10 +92,25 @@ object DSL {
   }
 
   /**
-   * Factory method for KijiSource.
+   * Creates a `Source` capable of reading rows (that include the specified columns) from a Kiji
+   * table.
    *
-   * @param tableURI Address of the Kiji table to use.
-   * @param columns Columns to read from.
+   * Columns are requested by name (of the form "family:qualifier"). Columns requested are
+   * subject to the default data request options (no restriction on time range retrieved,
+   * only the most recent version retrieved for each column). Only specific columns may be
+   * requested with this method, not map-type column families.
+   *
+   * This method accepts a collection of pairs mapping the names of columns in a Kiji table to
+   * the names of desired tuple fields. When the generated `Source` is used as part of an
+   * analysis pipeline, one tuple will be generated per Kiji table row retrieved,
+   * and column values will be available in the tuple field associated here. The entity id for
+   * the row will automatically be available in the tuple field named "entityId".
+   *
+   * @param tableURI is a Kiji URI that addresses the table to read from.
+   * @param columns is a collection of pairs associating the names of Kiji columns (in the form
+   *     "family:qualifier") with tuple field names that will be used to access column values in an
+   *     analysis pipeline.
+   * @return a `Source` that will read rows including the specified columns from the Kiji table.
    */
   def KijiInput(
       tableURI: String) (
@@ -104,11 +123,26 @@ object DSL {
   }
 
   /**
-   * Factory method for KijiSource.
+   * Creates a `Source` capable of reading rows (that include the specified columns) from a Kiji
+   * table.
    *
-   * @param tableURI Address of the Kiji table to use.
-   * @param timeRange Range of timestamps to read from each column.
-   * @param columns Columns to read from.
+   * Columns are requested by name (of the form "family:qualifier"), and only cells that fall
+   * within the specified time range will be retrieved from the columns. Only the most recent
+   * version of each requested column will be retrieved. Only specific columns may be requested
+   * with this method, not map-type column families.
+   *
+   * This method accepts a collection of pairs mapping the names of columns in a Kiji table to
+   * the names of desired tuple fields. When the generated `Source` is used as part of an
+   * analysis pipeline, one tuple will be generated per Kiji table row retrieved,
+   * and column values will be available in the tuple field associated here. The entity id for
+   * the row will automatically be available in the tuple field named "entityId".
+   *
+   * @param tableURI is a Kiji URI that addresses the table to read from.
+   * @param timeRange that retrieved cells must belong to.
+   * @param columns is a collection of pairs associating the names of Kiji columns (in the form
+   *     "family:qualifier") with tuple field names that will be used to access column values in an
+   *     analysis pipeline.
+   * @return a `Source` that will read rows including the specified columns from the Kiji table.
    */
   def KijiInput(
       tableURI: String,
@@ -122,10 +156,26 @@ object DSL {
   }
 
   /**
-   * Factory method for KijiSource.
+   * Creates a `Source` capable of reading rows (that include the specified columns) from a Kiji
+   * table.
    *
-   * @param tableURI Address of the Kiji table to use.
-   * @param columns Columns to read from.
+   * Columns (or map-type column families) are requested using a
+   * [[org.kiji.chopsticks.ColumnRequest]] and cells retrieved for each column (or map-type
+   * column family) are subject to the restrictions specified in the
+   * [[org.kiji.chopsticks.ColumnRequest]]. No restrictions are placed on the time range retrieved.
+   *
+   * This method accepts a map associating requests for columns in a Kiji table to
+   * the names of desired tuple fields. When the generated `Source` is used as part of an
+   * analysis pipeline, one tuple will be generated per Kiji table row retrieved,
+   * and column values will be available in the tuple field associated here. The entity id for
+   * the row will automatically be available in the tuple field named "entityId".
+   *
+   * @param tableURI is a Kiji URI that addresses the table to read from.
+   * @param columns is a map associating requests for columns (or map-type column
+   *     families) with tuple field names that will be used to access values in an analysis
+   *     pipeline.
+   * @return a `Source` that will read rows including the specified columns (or column families)
+   *     from the Kiji table.
    */
   def KijiInput(
       tableURI: String,
@@ -136,11 +186,28 @@ object DSL {
   }
 
   /**
-   * Factory method for KijiSource.
+   * Creates a `Source` capable of reading rows (that include the specified columns) from a Kiji
+   * table.
    *
-   * @param tableURI Address of the Kiji table to use.
-   * @param timeRange Range of timestamps to read from each column.
-   * @param columns Columns to read from.
+   * Columns (or map-type column families) are requested using a
+   * [[org.kiji.chopsticks.ColumnRequest]] and cells retrieved for each column (or map-type
+   * column family) are subject to the restrictions specified in the
+   * [[org.kiji.chopsticks.ColumnRequest]]. Only cells that fall within the specified time range
+   * will be retrieved.
+   *
+   * This method accepts a map associating requests for columns in a Kiji table to
+   * the names of desired tuple fields. When the generated `Source` is used as part of an
+   * analysis pipeline, one tuple will be generated per Kiji table row retrieved,
+   * and column values will be available in the tuple field associated here. The entity id for
+   * the row will automatically be available in the tuple field named "entityId".
+   *
+   * @param tableURI is a Kiji URI that addresses the table to read from.
+   * @param timeRange that retrieved cells must belong to.
+   * @param columns is a collection of pairs associating requests for columns (or map-type column
+   *     families) with tuple field names that will be used to access values in an analysis
+   *     pipeline.
+   * @return a `Source` that will read rows including the specified columns (or column families)
+   *     from the Kiji table.
    */
   def KijiInput(
       tableURI: String,
@@ -152,10 +219,15 @@ object DSL {
   }
 
   /**
-   * Factory method for KijiSource.
+   * Creates a `Source` capable of writing values to a Kiji table. The source created will write
+   * the value in a specific tuple field to a cell with the current timestamp in a column in a
+   * Kiji table. The row written to will be determined by the entity id present in the tuple
+   * field "entityId".
    *
-   * @param tableURI Address of the Kiji table to use.
-   * @param columns Columns to write to.
+   * @param tableURI is a Kiji URI that addresses the table to write to.
+   * @param columns is a collection of pairs associating tuple field names with columns in a Kiji
+   *     table. The value from the tuple field will be written to the associated Kiji table column.
+   * @return a `Source` that can write values to a Kiji table.
    */
   def KijiOutput(
       tableURI: String) (
@@ -167,10 +239,15 @@ object DSL {
   }
 
   /**
-   * Factory method for KijiSource.
+   * Creates a `Source` capable of writing values to a Kiji table. The source created will write
+   * the value in a specific tuple field to a cell with the current timestamp in a column in a
+   * Kiji table. The row written to will be determined by the entity id present in the tuple
+   * field "entityId".
    *
-   * @param tableURI Address of the Kiji table to use.
-   * @param columns Columns to write to.
+   * @param tableURI is a Kiji URI that address the table to write to.
+   * @param columns is a map associating tuple field names with columns in a Kiji table. The value
+   *     from the tuple field will be written to the associated Kiji table column.
+   * @return a `Source` that can write values to a Kiji table.
    */
   def KijiOutput(
       tableURI: String,
@@ -179,10 +256,11 @@ object DSL {
   }
 
   /**
-   * Get the first entry of a [[java.util.NavigableMap]]
+   * Gets the value of the first entry from a [[java.util.NavigableMap]].
    *
-   * @param slice The map to get the first entry from.
-   * @param T The type of value stored in the map.
+   * @param slice is the map to retrieve the value from.
+   * @tparam T is the type of value stored in the map.
+   * @return the value of the first entry in the specified map.
    */
   // TODO: This can be removed once KijiSlice is in.
   def getMostRecent[T](slice: NavigableMap[Long, T]): T = slice.firstEntry().getValue()
