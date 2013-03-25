@@ -53,11 +53,11 @@ import org.kiji.schema.KijiURI
 /**
  * A scheme that can source and sink data from a Kiji table. This scheme is responsible for
  * converting rows from a Kiji table that are input to a Cascading flow into Cascading tuples (see
- * [[#source(cascading.flow.FlowProcess, cascading.scheme.SourceCall)]]) and writing output
- * data from a Cascading flow to a Kiji table
- * (see [[#sink(cascading.flow.FlowProcess, cascading.scheme.SinkCall)]]).
+ * [[org.kiji.chopsticks.KijiScheme#source]]) and writing output
+ * data from a Cascading flow to a Kiji table (see [[org.kiji.chopsticks.KijiScheme#sink)]]).
  *
- * @param columns mapping tuple field names to Kiji column names.
+ * @param timeRange for data requested from a Kiji table.
+ * @param columns associates tuple field names to Kiji column names.
  */
 @ApiAudience.Framework
 @ApiStability.Unstable
@@ -81,12 +81,14 @@ class KijiScheme(
 
   /**
    * Sets any configuration options that are required for running a MapReduce job
-   * that reads from a Kiji table. This method gets called on the client machine
-   * during job setup.
+   * that reads from a Kiji table.
    *
-   * @param process Current Cascading flow being built.
-   * @param tap The tap that is being used with this scheme.
-   * @param conf The job configuration object.
+   * This method gets called on the client machine during job setup. It builds a `KijiDataRequest`
+   * that will be used by the job to read data, and sets the input format for the job.
+   *
+   *@param process is the Cascading flow being built.
+   * @param tap that is used with this `Scheme`.
+   * @param conf is the configuration used by the Job.
    */
   override def sourceConfInit(
       process: FlowProcess[JobConf],
@@ -103,11 +105,12 @@ class KijiScheme(
   }
 
   /**
-   * Sets up any resources required for the MapReduce job. This method is called
-   * on the cluster.
+   * Initializes a context for a source that reads from a Kiji table. In this case,
+   * the context is a [[org.kiji.chopsticks.KijiValue]] which holds `KijiRowData` read from the
+   * Kiji table. This method is called once on the cluster during Job initialization.
    *
-   * @param process Current Cascading flow being run.
-   * @param sourceCall Object containing the context for this source.
+   * @param process is the Cascading flow being initialized.
+   * @param sourceCall contains the context used with the source.
    */
   override def sourcePrepare(
       process: FlowProcess[JobConf],
@@ -117,11 +120,12 @@ class KijiScheme(
 
   /**
    * Reads and converts a row from a Kiji table to a Cascading Tuple. This method
-   * is called once for each row on the cluster.
+   * is called once for each row read in a MapReduce task.
    *
-   * @param process Current Cascading flow being run.
-   * @param sourceCall Object containing the context for this source.
-   * @return True always. This is used to indicate if there are more rows to read.
+   * @param process is the Cascading flow being executed.
+   * @param sourceCall contains the context used with the source.
+   * @return `true` if a Kiji table row was successfully read and converted to a Cascading tuple,
+   *     `false` if there are no more rows to read.
    */
   override def source(
       process: FlowProcess[JobConf],
@@ -140,11 +144,11 @@ class KijiScheme(
   }
 
   /**
-   * Cleans up any resources used during the MapReduce job. This method is called
-   * on the cluster.
+   * Cleans up any resources used during a MapReduce job reading from a Kiji table. It clears the
+   * context used by the source. This method is called once for each MapReduce task.
    *
-   * @param process Current Cascading flow being run.
-   * @param sourceCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sourceCall contains the context for this source.
    */
   override def sourceCleanup(
       process: FlowProcess[JobConf],
@@ -154,12 +158,13 @@ class KijiScheme(
 
   /**
    * Sets any configuration options that are required for running a MapReduce job
-   * that writes to a Kiji table. This method gets called on the client machine
-   * during job setup.
+   * that writes to a Kiji table. This method gets called on the client machine during job setup.
+   * Currently, there are no configuration options for writing to a Kiji table,
+   * so this method is a no-op.
    *
-   * @param process Current Cascading flow being built.
-   * @param tap The tap that is being used with this scheme.
-   * @param conf The job configuration object.
+   * @param process is the Cascading flow being built.
+   * @param tap that is used with this `Scheme`.
+   * @param conf is the configuration used by the Job.
    */
   override def sinkConfInit(
       process: FlowProcess[JobConf],
@@ -169,11 +174,12 @@ class KijiScheme(
   }
 
   /**
-   * Sets up any resources required for the MapReduce job. This method is called
-   * on the cluster.
+   * Initializes any resources needed by a MapReduce job that writes data to a Kiji table. This
+   * method is called on the cluster by MapReduce tasks. It initializes a Kiji table writer and
+   * sets it as part of the sink's context.
    *
-   * @param process Current Cascading flow being run.
-   * @param sinkCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sinkCall contains the context for this sink.
    */
   override def sinkPrepare(
       process: FlowProcess[JobConf],
@@ -193,11 +199,11 @@ class KijiScheme(
   }
 
   /**
-   * Converts and writes a Cascading Tuple to a Kiji table. This method is called once
-   * for each row on the cluster.
+   * Writes data in a Cascading tuple to columns in a Kiji table. This method is called once per
+   * output tuple on the cluster, when a job's output is sinked to a Kiji table.
    *
-   * @param process Current Cascading flow being run.
-   * @param sinkCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sinkCall contains the context for this sink (in this case a Kiji table writer).
    */
   override def sink(
       process: FlowProcess[JobConf],
@@ -211,11 +217,12 @@ class KijiScheme(
   }
 
   /**
-   * Cleans up any resources used during the MapReduce job. This method is called
-   * on the cluster.
+   * Releases any resources used by a MapReduce job that writes to a Kiji table. This method is
+   * called once by each MapReduce task upon completion. This method retrieves the Kiji table
+   * writer used by the MapReduce task and closes it.
    *
-   * @param process Current Cascading flow being run.
-   * @param sinkCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sinkCall contains the context for this sink (in this case a Kiji table writer).
    */
   override def sinkCleanup(
       process: FlowProcess[JobConf],
@@ -235,18 +242,21 @@ class KijiScheme(
   override def hashCode(): Int = columns.hashCode()
 }
 
-/** Companion object for KijiScheme. Contains helper methods and constants. */
+/**
+ * Companion to [[org.kiji.chopsticks.KijiScheme]] which contains private methods and values used
+ * to implement KijiScheme's functionality.
+ */
 object KijiScheme {
-  /** Field name containing a row's [[EntityId]]. */
+  /** Field name containing a row's `EntityId`. */
   private[chopsticks] val entityIdField: String = "entityId"
 
   /**
    * Converts a KijiRowData to a Cascading tuple.
    *
-   * @param columns Mapping from field name to column definition.
-   * @param fields Field names of desired tuple elements.
-   * @param row The row data.
-   * @return A tuple containing the values contained in the specified row.
+   * @param columns associates tuple field names to column requests.
+   * @param fields of a Cascading tuple that should be populated with row data.
+   * @param row data used to populate the Cascading tuple.
+   * @return a Cascading tuple containing the desired values from the row data.
    */
   private[chopsticks] def rowToTuple(
       columns: Map[String, ColumnRequest],
@@ -270,14 +280,13 @@ object KijiScheme {
     return result
   }
 
-  // TODO(CHOP-35): Use an output format that writes to HFiles.
   /**
    * Writes a Cascading tuple to a Kiji table.
    *
-   * @param columns Mapping from field name to column definition.
-   * @param fields Field names of incoming tuple elements.
-   * @param output Tuple to write out.
-   * @param writer KijiTableWriter to use to write.
+   * @param columns associates tuple field names to column requests.
+   * @param fields of a Cascading tuple that contain data to write to Kiji.
+   * @param output is a Cascading tuple containing data to write to Kiji.
+   * @param writer used to send data to a Kiji table.
    */
   private[chopsticks] def putTuple(
       columns: Map[String, ColumnRequest],
@@ -303,6 +312,13 @@ object KijiScheme {
     }
   }
 
+  /**
+   * Creates a request for data from a Kiji table.
+   *
+   * @param timeRange to include as part of the data request.
+   * @param columns (with options) to be included as part of the data request.
+   * @return a data request for the specified columns spanning the specified time range.
+   */
   private[chopsticks] def buildRequest(
       timeRange: TimeRange,
       columns: Iterable[ColumnRequest]): KijiDataRequest = {
@@ -326,6 +342,12 @@ object KijiScheme {
         .build()
   }
 
+  /**
+   * Creates a collection of Cascading tuple fields with the specified names.
+   *
+   * @param fieldNames for the Cascading tuple fields.
+   * @return a collection of Cascading tuple fields with the specified names.
+   */
   private[chopsticks] def buildFields(fieldNames: Iterable[String]): Fields = {
     val fieldArray: Array[Fields] = (Seq(entityIdField) ++ fieldNames)
         .map { name: String => new Fields(name) }
