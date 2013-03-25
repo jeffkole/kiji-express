@@ -41,17 +41,17 @@ import org.kiji.schema.KijiURI
 import org.kiji.schema.impl.HBaseKijiTable
 
 /**
- * <p>An [[InputFormat]] for use with Cascading whose input source is a Kiji table. This
+ * <p>An `InputFormat` for use with Cascading whose input source is a Kiji table. This
  * input format will scan over a subset of rows in a Kiji table, retrieving
- * [[org.kiji.schema.KijiRowData]] as a result. The columns retrieved during the scan, as well as
- * the time and row ranges used, are configured through an [[org.kiji.schema.KijiDataRequest]].</p>
+ * `KijiRowData` as a result. The columns retrieved during the scan, as well as
+ * the time and row ranges used, are configured through a `KijiDataRequest`.</p>
  *
  * <p>The input format itself is responsible for computing input splits over the Kiji table,
- * and retrieving a [[org.apache.hadoop.mapred.RecordReader]] for a particular split. See
- * [[KijiRecordReader]] for more information on how a particular input split is scanned
- * for rows. Record readers returned by this input format return key-value pairs of type
- * [[KijiKey]] and [[KijiValue]], which are simple wrappers around
- * [[org.kiji.schema.EntityId]] and [[org.kiji.schema.KijiRowData]], respectively.
+ * and retrieving a `RecordReader` for a particular split. See
+ * [[org.kiji.chopsticks.KijiRecordReader]] for more information on how a particular input split
+ * is scanned for rows. Record readers returned by this input format return key-value pairs of type
+ * [[org.kiji.chopsticks.KijiKey]] and [[org.kiji.chopsticks.KijiValue]], which are simple wrappers
+ * around `EntityId` and `KijiRowData``, respectively.
  *
  * <p>This input format uses the "old" style MapReduce API for compatibility with Cascading.</p>
  */
@@ -64,9 +64,9 @@ final class KijiInputFormat
    * created per region in the input Kiji table.
    *
    * @param configuration of the job using the splits. The configuration should specify the
-   *     input Kiji table being used, through the configuration variable
-   *     [[KijiConfKeys#KIJI_INPUT_TABLE_URI]].
-   * @param numSplits desired for the job. This framework hint is ignored by this method.
+   *     input Kiji table being used, through the configuration variable identified by the constant
+   *     `KijiConfKeys#KIJI_INPUT_TABLE_URI`.
+   *@param numSplits desired for the job. This framework hint is ignored by this method.
    * @return an array of input splits to be operated on in the MapReduce job.
    */
   override def getSplits(configuration: JobConf, numSplits: Int): Array[InputSplit] = {
@@ -105,11 +105,12 @@ final class KijiInputFormat
    *
    * @param split the record reader should operate over.
    * @param configuration of the job that uses the record reader. The configuration should specify
-   *     the input Kiji table through the configuration variable
-   *     [[KijiConfKeys#KIJI_INPUT_TABLE_URI]] and a serialized [[org.kiji.schema.KijiDataRequest]]
-   *     through the configuration variable [[KijiConfKeys#KIJI_INPUT_DATA_REQUEST]].
+   *     the input Kiji table through the configuration variable identified by the constant
+   *     `KijiConfKeys#KIJI_INPUT_TABLE_URI` and a serialized `KijiDataRequest`
+   *     through the configuration variable `KijiConfKeys#KIJI_INPUT_DATA_REQUEST`.
    * @param reporter is ignored by this method.
-   * @return An [[KijiRecordReader]] that will scan over a subset of rows in a Kiji table.
+   * @return An [[org.kiji.chopsticks.KijiRecordReader]] that will scan over a subset of rows in a
+   *     Kiji table.
    */
   override def getRecordReader(
       split: InputSplit,
