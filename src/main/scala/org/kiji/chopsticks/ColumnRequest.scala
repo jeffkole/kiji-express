@@ -36,7 +36,9 @@ import org.kiji.schema.filter.KijiColumnFilter
  */
 @ApiAudience.Public
 @ApiStability.Unstable
-final case class ColumnRequest(
+final case class ColumnRequest private[chopsticks] (
     name: String,
     maxVersions: Int = 1,
+    // Private to package chopsticks for now. Should be made public when we decide on type
+    // to give to users.
     private[chopsticks] val filter: KijiColumnFilter = null) extends Serializable

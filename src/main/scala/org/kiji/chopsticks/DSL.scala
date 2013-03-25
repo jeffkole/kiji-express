@@ -26,28 +26,35 @@ import org.kiji.annotations.ApiStability
 import org.kiji.schema.filter.KijiColumnFilter
 import org.kiji.schema.filter.RegexQualifierColumnFilter
 
+/**
+ * A factory for Scalding `Source`s capable of reading from or writing to a Kiji table.
+ */
 @ApiAudience.Public
 @ApiStability.Unstable
 object DSL {
   /**
-   * Used with [[#MapColumn(String, String, Int)]] and [[#Column(String, Int)]] to specify that all
-   * versions of each column should be read.
+   * Used to indicate that all versions of a column (or columns in a map-type column family) should
+   * be read.
    */
   val all = Integer.MAX_VALUE
 
   /**
-   * Used with [[#MapColumn(String, String, Int)]] and [[#Column(String, Int)]] to specify that
-   * only the latest version of each column should be read.
+   * Used to indicate that only the latest version of a column (or columns in a map-type column
+   * family) should be read.
    */
   val latest = 1
 
   /**
-   * Factory method for Column that is a map-type column family.
+   * Creates a request for a map-type column family from a Kiji table.
    *
-   * @param name of column in "family:qualifier" or "family" form.
-   * @param qualifierMatches Regex for filtering qualifiers. Specify the empty string ("") to accept
-   *     all qualifiers. Default value is "".
-   * @param versions of column to get. Default value is 1.
+   * Such a request retrieves cell(s) for all columns from the map-type column family, subject
+   * to the column's qualifier matching a regular expression.
+   *
+   * @param name of the map-type column family requested.
+   * @param qualifierMatches is a regular expression that qualifiers for columns retrieved must
+   *     match. Use the empty string (default) to match all qualifiers / retrieve all columns.
+   * @param versions (maximum) of each column in the family to retrieve. The most recent versions
+   *     are retrieved first.
    */
   def MapColumn(
       name: String,
