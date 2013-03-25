@@ -24,7 +24,7 @@ import org.kiji.annotations.ApiStability
 import org.kiji.schema.EntityId
 
 /**
- * Acts as a wrapper around [[EntityId]]. Instances of this class can be reused in MapReduce
+ * Acts as a wrapper around `EntityId``. Instances of this class can be reused in MapReduce
  * jobs to hold entity ids read from Kiji.
  */
 @ApiAudience.Private
