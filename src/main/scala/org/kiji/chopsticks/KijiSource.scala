@@ -64,49 +64,58 @@ import org.kiji.schema.KijiTableWriter
 import org.kiji.schema.KijiURI
 
 /**
- * Facilitates writing to and reading from a Kiji table.
+ * A Scalding `Source` which can read data from / write data to a Kiji table.
  *
- * @param tableAddress Address of the target KijiTable. This should be provided as a
- *     [[org.kiji.schema.KijiURI]].
- * @param timeRange Range of timestamps to read from each column.
- * @param columns Mapping from field name to Kiji column name.
+ * A `KijiSource` is the type clients use to read data from a Kiji table in an analysis pipeline,
+ * or write data to Kiji from a pipeline. End-users, however, should not directly instantiate
+ * instances of `KijiSource`. Instead, clients should use the methods in the
+ * [[org.kiji.chopsticks.DSL]] module to obtain sources properly configured for input or output.
+ *
+ * @param tableAddress is a Kiji URI that addresses the table to use for input or output.
+ * @param timeRange that data read from Kiji using this source must fall into.
+ * @param columns associates tuple field names with columns from a Kiji table.
  */
-@ApiAudience.Framework
+@ApiAudience.Public
 @ApiStability.Unstable
-final class KijiSource(
-    val tableAddress: String,
-    val timeRange: TimeRange,
-    val columns: Map[Symbol, ColumnRequest])
+final class KijiSource private[chopsticks] (
+    private[chopsticks] val tableAddress: String,
+    private[chopsticks] val timeRange: TimeRange,
+    private[chopsticks] val columns: Map[Symbol, ColumnRequest])
     extends Source {
   import KijiSource._
 
+  /** A type alias for a Scheme that can be used when running against a MapReduce cluster. */
   private type HadoopScheme = Scheme[JobConf, RecordReader[_, _], OutputCollector[_, _], _, _]
-
-  /** The URI of the target Kiji table. */
+  /** The Kiji URI of the Kiji table used for reading or writing. */
   private val tableUri: KijiURI = KijiURI.newBuilder(tableAddress).build()
   /** A Kiji scheme intended to be used with Scalding/Cascading's hdfs mode. */
-  private val kijiScheme: KijiScheme = new KijiScheme(timeRange, convertColumnMap(columns))
+  private val kijiScheme: KijiScheme = new KijiScheme(timeRange, symbolKeysToStringKeys(columns))
   /** A Kiji scheme intended to be used with Scalding/Cascading's local mode. */
   private val localKijiScheme: LocalKijiScheme = {
-    new LocalKijiScheme(timeRange, convertColumnMap(columns))
+    new LocalKijiScheme(timeRange, symbolKeysToStringKeys(columns))
   }
 
   /**
-   * Convert scala columns definition into its corresponding java variety.
+   * Converts a mapping using `Symbol` keys to one using `String` keys.
    *
-   * @param columnMap Mapping from field name to Kiji column name.
-   * @return Java map from field name to column definition.
+   * @param aMap with `Symbol` keys.
+   * @return an identical map with `String` keys.
    */
-  private def convertColumnMap(columnMap: Map[Symbol, ColumnRequest])
-      : Map[String, ColumnRequest] = {
-    columnMap.map { case (symbol, column) => (symbol.name, column) }
+  private def symbolKeysToStringKeys[T](aMap: Map[Symbol, T]): Map[String, T] = {
+    aMap.map { case (symbol, column) => (symbol.name, column) }
   }
 
   /**
-   * Takes a buffer containing rows and writes them to the table at the specified uri.
+   * Populates the Kiji table used by this `Source` with row data.
    *
-   * @param rows Tuples to write to populate the table with.
-   * @param fields Field names for elements in the tuple.
+   * The row data is specified as a collection of Cascading tuples, where each tuple contains a
+   * special field named `entityId` that contains the entity id for the intended row,
+   * and all other field names correspond to column names in the Kiji table to populate. This
+   * method should only be used as part of the testing infrastructure and should never be used by
+   * outside clients.
+   *
+   * @param rows contains the tuples with row data that should be used to populate the table.
+   * @param fields from the tuple that will be used to populate the table.
    */
   private def populateTestTable(rows: Buffer[Tuple], fields: Fields) {
     // Open a table writer.
@@ -156,28 +165,28 @@ final class KijiSource(
   }
 
   /**
-   * Creates a Scheme that writes to/reads from a Kiji table for usage with
-   * the hadoop runner.
+   * Creates a [[org.kiji.chopsticks.KijiScheme]] that can be used to run jobs on a MapReduce
+   * cluster.
    */
   override val hdfsScheme: HadoopScheme = kijiScheme
       // This cast is required due to Scheme being defined with invariant type parameters.
       .asInstanceOf[HadoopScheme]
 
   /**
-   * Creates a Scheme that writes to/reads from a Kiji table for usage with
-   * the local runner.
+   * Creates a [[org.kiji.chopsticks.KijiScheme]] that can be used to run jobs using Cascading's
+   * local runner.
    */
   override val localScheme: LocalScheme = localKijiScheme
       // This cast is required due to Scheme being defined with invariant type parameters.
       .asInstanceOf[LocalScheme]
 
   /**
-   * Create a connection to the physical data source (also known as a Tap in Cascading)
-   * which, in this case, is a [[org.kiji.schema.KijiTable]].
+   * Creates a `Tap` which can be used to read or write data from a Kiji table.
    *
-   * @param readOrWrite Specifies if this source is to be used for reading or writing.
-   * @param mode Specifies which job runner/flow planner is being used.
-   * @return A tap to use for this data source.
+   * @param readOrWrite indicates if the tap should be used for reading or writing.
+   * @param mode indicates if the tap will be used with the local job runner or on a MapReduce
+   *     cluster.
+   *@return a tap to use with this data source.
    */
   override def createTap(readOrWrite: AccessMode)(implicit mode: Mode): Tap[_, _, _] = {
     val tap: Tap[_, _, _] = mode match {
@@ -196,7 +205,8 @@ final class KijiSource(
             new KijiTap(tableUri, scheme).asInstanceOf[Tap[_, _, _]]
           }
           case Write => {
-            val scheme = new TestKijiScheme(buffers(this), timeRange, convertColumnMap(columns))
+            val scheme = new TestKijiScheme(buffers(this), timeRange,
+                symbolKeysToStringKeys(columns))
 
             new KijiTap(tableUri, scheme).asInstanceOf[Tap[_, _, _]]
           }
@@ -215,7 +225,7 @@ final class KijiSource(
           // After performing a write, use TestLocalKijiScheme to populate the output buffer.
           case Write => {
             val scheme = new TestLocalKijiScheme(buffers(this), timeRange,
-                convertColumnMap(columns))
+                symbolKeysToStringKeys(columns))
 
             new LocalKijiTap(tableUri, scheme).asInstanceOf[Tap[_, _, _]]
           }
@@ -242,23 +252,32 @@ final class KijiSource(
 }
 
 /**
- * Contains a private, inner class used by [[org.kiji.chopsticks.KijiSource]] when working with
- * tests.
+ * Companion to [[org.kiji.chopsticks.KijiSource]] that contains `Scheme` types used during
+ * testing.
  */
 object KijiSource {
   /**
-   * A LocalKijiScheme that loads rows in a table into the provided buffer. This class
-   * should only be used during tests.
+   * A local scheme that loads rows from a Kiji table into a buffer once a MapReduce task is
+   * complete. This class is only used as part of the testing infrastructure (which allows for
+   * clients to verify the rows contained in the buffer as part of testing).
    *
-   * @param buffer Buffer to fill with post-job table rows for tests.
-   * @param timeRange Range of timestamps to read from each column.
-   * @param columns Scalding field name to Kiji column name mapping.
+   * @param buffer to fill with rows once a MapReduce job is complete.
+   * @param timeRange that data read from the Kiji table should fall into.
+   * @param columns associates Scalding tuple field names to Kiji columns.
    */
   private class TestLocalKijiScheme(
       val buffer: Buffer[Tuple],
       timeRange: TimeRange,
       columns: Map[String, ColumnRequest])
       extends LocalKijiScheme(timeRange, columns) {
+
+    /**
+     * Initializes resources needed to write data to a Kiji table.
+     *
+     * @param process is the Cascading flow being built.
+     * @param tap that is being used with this scheme.
+     * @param conf is the configuration used by the job.
+     */
     override def sinkConfInit(
         process: FlowProcess[Properties],
         tap: Tap[Properties, InputStream, OutputStream],
@@ -269,6 +288,13 @@ object KijiSource {
       tap.sourceConfInit(process, conf)
     }
 
+    /**
+     * Cleans-up resources used to write data to a Kiji table. In the case of this test scheme,
+     * output rows are used to populate the buffer used by this scheme instance.
+     *
+     * @param process is the Cascading flow being run.
+     * @param sinkCall contains the context for this sink.
+     */
     override def sinkCleanup(
         process: FlowProcess[Properties],
         sinkCall: SinkCall[KijiTableWriter, OutputStream]) {
@@ -286,12 +312,13 @@ object KijiSource {
   }
 
   /**
-   * A KijiScheme that loads rows in a table into the provided buffer. This class should only be
-   * used during tests.
+   * A scheme that loads rows from a Kiji table into a buffer once a MapReduce task is complete.
+   * This class is only used as part of the testing infrastructure (which allows for clients to
+   * verify the rows contained in the buffer as part of testing).
    *
-   * @param buffer Buffer to fill with post-job table rows for tests.
-   * @param timeRange Range of timestamps to read from each column.
-   * @param columns Scalding field name to Kiji column name mapping.
+   * @param buffer to fill with rows once a MapReduce job is complete.
+   * @param timeRange that data read from the Kiji table should fall into.
+   * @param columns associates Scalding tuple field names to Kiji columns.
    */
   private class TestKijiScheme(
       val buffer: Buffer[Tuple],
