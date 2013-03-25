@@ -42,8 +42,9 @@ import org.kiji.schema.KijiURI
 /**
  * A record reader that can scan a subset of rows in a Kiji table. This record reader is
  * configured to read from a Kiji table under certain data request parameters through a Hadoop
- * [[Configuration]] It returns key-value pairs of type [[KijiKey]] (a wrapper around
- * [[org.kiji.schema.EntityId]] and [[KijiValue]] (a wrapper around [[KijiRowData]]).
+ * `Configuration`. It returns key-value pairs of type [[org.kiji.chopsticks.KijiKey]]
+ * (a wrapper around `EntityId` and [[org.kiji.chopsticks.KijiValue]] (a wrapper around
+ * `KijiRowData`).
  *
  * The record reader will scan over rows in the table specified in the provided input split,
  * subject to row limits specified in the data request serialized into the specified
@@ -53,8 +54,8 @@ import org.kiji.schema.KijiURI
  *     subset of rows from a Kiji table.
  * @param configuration for the MapReduce job using this record reader. The configuration
  *     should specify the input Kiji table through the configuration variable
- *     [[KijiConfKeys#KIJI_INPUT_TABLE_URI]] and a serialized [[KijiDataRequest]]
- *     through the configuration variable [[KijiConfKeys#KIJI_INPUT_DATA_REQUEST]].
+ *     `KijiConfKeys#KIJI_INPUT_TABLE_URI` and a serialized `KijiDataRequest`
+ *     through the configuration variable `KijiConfKeys#KIJI_INPUT_DATA_REQUEST`.
  */
 @ApiAudience.Framework
 @ApiStability.Unstable
@@ -105,14 +106,14 @@ final class KijiRecordReader(
   private val iterator: java.util.Iterator[KijiRowData] = scanner.iterator()
 
   /**
-   * @return a new, empty, reusable instance of [[KijiKey]] which will hold keys read by
-   *     this record reader.
+   * @return a new, empty, reusable instance of [[org.kiji.chopsticks.KijiKey]] which will hold
+   *     keys read by this record reader.
    */
   override def createKey(): KijiKey = new KijiKey()
 
   /**
-   * @return a new, empty, reusable instance of [[KijiValue]] which will hold values read by
-   *     this record reader.
+   * @return a new, empty, reusable instance of [[org.kiji.chopsticks.KijiValue]] which will hold
+   *     values read by this record reader.
    */
   override def createValue(): KijiValue = new KijiValue()
 
@@ -155,7 +156,9 @@ final class KijiRecordReader(
     }
   }
 
-  /** Release all resources used by this record reader. */
+  /**
+   * Releases all resources used by this record reader.
+   */
   override def close() {
     scanner.close()
     reader.close()
