@@ -42,8 +42,7 @@ final class KijiTableSplit(
     extends InputSplit {
 
   /**
-   * No argument constructor for KijiTableSplit. This is required to be a seperate constructor
-   * so that java has access to it.
+   * A no-argument constructor for use with reflection.
    */
   // scalastyle:off public.methods.have.type
   def this() = this(new TableSplit())
@@ -62,12 +61,12 @@ final class KijiTableSplit(
   }
 
   /**
-   * @return the HBase row key of the first row processed by this input split.
+   * @return the HBase row key of the first row processed (inclusive) by this input split.
    */
   def getStartRow(): Array[Byte] = split.getStartRow()
 
   /**
-   * @return the HBase row key of the last row processed by this input split.
+   * @return the HBase row key of the last row processed (exclusive) by this input split.
    */
   def getEndRow(): Array[Byte] = split.getEndRow()
 }

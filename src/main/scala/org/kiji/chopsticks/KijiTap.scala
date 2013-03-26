@@ -53,17 +53,20 @@ import org.kiji.schema.Kiji
 import org.kiji.schema.KijiURI
 
 /**
- * A [[Tap]] for reading data from a Kiji table. The tap is responsible for configuring a
- * MapReduce job with the correct input format for reading from a Kiji table,
- * as well as the proper classpath dependencies for MapReduce tasks.
+ * A `Tap` for reading or writing data from a Kiji table. A tap represents a particular data
+ * source/sink that can be read from / written to during a MapReduce job. The tap is responsible
+ * for configuring a MapReduce job with the correct input/output formats as well as the proper
+ * classpath dependencies for MapReduce tasks.
  *
  * Note: Warnings about a missing serialVersionUID are ignored here. When KijiTap is serialized,
  * the result is not persisted anywhere making serialVersionUID unnecessary.
  *
  * @param uri for the Kiji table this tap will be used to read.
  * @param scheme to be used with this tap that will convert data read from Kiji into Cascading's
- *     tuple model. Note: You must use [[KijiScheme]] with this tap.
+ *     tuple model. Note: You must use [[org.kiji.chopsticks.KijiScheme]] with this tap.
  */
+@ApiAudience.Framework
+@ApiStability.Unstable
 class KijiTap(
     uri: KijiURI,
     private val scheme: KijiScheme)
@@ -80,8 +83,8 @@ class KijiTap(
    * that reads from a Kiji table. This method gets called on the client machine
    * during job setup.
    *
-   * @param process Current Cascading flow being built.
-   * @param conf The job configuration object.
+   * @param process is the Cascading flow being built.
+   * @param conf is the configuration used by the job.
    */
   override def sourceConfInit(process: FlowProcess[JobConf], conf: JobConf) {
     // Configure the job's input format.
@@ -104,8 +107,8 @@ class KijiTap(
    * that writes to a Kiji table. This method gets called on the client machine
    * during job setup.
    *
-   * @param process Current Cascading flow being built.
-   * @param conf The job configuration object.
+   * @param process is the Cascading flow being built.
+   * @param conf is configuration used by the job.
    */
   override def sinkConfInit(process: FlowProcess[JobConf], conf: JobConf) {
     // TODO(CHOP-35): Use an output format that writes to HFiles.
@@ -124,8 +127,18 @@ class KijiTap(
     super.sinkConfInit(process, conf)
   }
 
+  /**
+   * @return a unique identifier for this tap instance, used by the Cascading planner.
+   */
   override def getIdentifier(): String = id
 
+  /**
+   * Opens and returns a reader for tuple entries obtained from the data store for this tap.
+   *
+   * @param process is the Cascading flow being used.
+   * @param recordReader used to read data from the data source.
+   * @return an iterator over tuple entries obtained from the data store.
+   */
   override def  openForRead(
       process: FlowProcess[JobConf],
       recordReader: RecordReader[KijiKey, KijiValue]): TupleEntryIterator = {
@@ -135,6 +148,13 @@ class KijiTap(
         recordReader)
   }
 
+  /**
+   * Opens and returns a writer for tuple entries to be written to the data store for this tap.
+   *
+   * @param process is the Cascading flow being used.
+   * @param outputCollector used by MapReduce to output key-value pairs.
+   * @return a writer for tuple entries to be sent to the data store.
+   */
   override def openForWrite(
       process: FlowProcess[JobConf],
       outputCollector: OutputCollector[_, _]): TupleEntryCollector = {
@@ -144,14 +164,34 @@ class KijiTap(
         outputCollector)
   }
 
+  /**
+   * Creates the data store associated with this tap. This method throws an exception because
+   * KijiChopsticks does not support creating Kiji tables as part of an analysis pipeline.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return nothing, as this method always throws an exception.
+   */
   override def createResource(jobConf: JobConf): Boolean = {
     throw new UnsupportedOperationException("KijiTap does not support creating tables for you.")
   }
 
+  /**
+   * Deletes the data store associated with this tap. This method throws an exception because
+   * KijiChopsticks does not support deleting Kiji tables as part of an analysis pipeline.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return nothing, as this method always throws an exception.
+   */
   override def deleteResource(jobConf: JobConf): Boolean = {
     throw new UnsupportedOperationException("KijiTap does not support deleting tables for you.")
   }
 
+  /**
+   * Determines if the resource associated with this tap (a Kiji table) exists.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return `true` if the Kiji table exists, `false` otherwise.
+   */
   override def resourceExists(jobConf: JobConf): Boolean = {
     val uri: KijiURI = KijiURI.newBuilder(tableUri).build()
 
@@ -160,7 +200,13 @@ class KijiTap(
     }
   }
 
-  // currently unable to find last mod time on a table.
+  /**
+   * Gets the last time the resource associated with this tap (a Kiji table) was modified.
+   * Currently, this method just returns the current time.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return the current time in milliseconds.
+   */
   override def getModifiedTime(jobConf: JobConf): Long = System.currentTimeMillis()
 
   override def equals(other: Any): Boolean = {
@@ -174,7 +220,8 @@ class KijiTap(
 }
 
 /**
- * Companion object for KijiTap. Contains helper methods for finding/adding dependency jars.
+ * Companion for [[org.kiji.chopsticks.KijiTap]] containing helper methods for adding
+ * dependencies to the distributed cache.
  */
 object KijiTap {
   private val logger: Logger = LoggerFactory.getLogger(classOf[KijiTap])
@@ -210,8 +257,9 @@ object KijiTap {
    * Finds Kiji dependency jars and returns a list of their paths. Use this method to find
    * jars that need to be sent to Hadoop's DistributedCache.
    *
-   * @param fsConf Configuration containing options for the filesystem containing jars.
-   * @return A list of paths to dependency jars.
+   * @param fsConf is the configuration used to obtain a filesystem to search for jars.
+   * @return a list of paths to Kiji dependency jars that should be added to the DistributedCache
+   *     of jobs.
    */
   private def findKijiJars(fsConf: Configuration): Seq[String] = {
     // Find the kiji jars.
