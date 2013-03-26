@@ -65,17 +65,16 @@ private[chopsticks] case class InputContext(
 /**
  * A scheme that can source and sink data from a Kiji table.
  *
- * <p>This scheme is responsible for converting rows from a Kiji table that are input to a
- * Cascading flow into Cascading tuples (see
- * [[#source(cascading.flow.FlowProcess, cascading.scheme.SourceCall)]]) and writing output
- * data from a Cascading flow to a Kiji table
- * (see [[#sink(cascading.flow.FlowProcess, cascading.scheme.SinkCall)]]). This scheme is meant
- * to be used with [[LocalKijiTap]] and Cascading's local job runner. Jobs run with Cascading's
- * local job runner execute on your local machine instead of a cluster. This can be helpful for
- * testing or quick jobs.</p>
+ * This scheme is responsible for converting rows from a Kiji table that are input to a
+ * Cascading flow into Cascading tuples (see [[org.kiji.chopsticks.LocalKijiScheme#source]]) and
+ * writing output data from a Cascading flow to a Kiji table (see
+ * [[org.kiji.chopsticks.LocalKijiScheme#sink)]]). This scheme is meant to be used with
+ * [[org.kiji.chopsticks.LocalKijiTap]] and Cascading's local job runner. Jobs run
+ * with Cascading's local job runner execute on your local machine instead of a cluster. This can
+ * be helpful for testing or quick jobs.
  *
- * <p>Note: Warnings about a missing serialVersionUID are ignored here. When KijiScheme is
- * serialized, the result is not persisted anywhere making serialVersionUID unnecessary.</p>
+ * Note: Warnings about a missing serialVersionUID are ignored here. When KijiScheme is
+ * serialized, the result is not persisted anywhere making serialVersionUID unnecessary.
  */
 @ApiAudience.Framework
 @ApiStability.Unstable
@@ -97,11 +96,12 @@ class LocalKijiScheme(
 
   /**
    * Sets any configuration options that are required for running a local job
-   * that reads from a Kiji table.
+   * that reads from a Kiji table. Currently this method is a no-op as no extra configuration is
+   * needed.
    *
-   * @param process Current Cascading flow being built.
-   * @param tap The tap that is being used with this scheme.
-   * @param conf The job configuration object.
+   * @param process is the Cascading flow being built.
+   * @param tap that is being used with this scheme.
+   * @param conf is the configuration for the Hadoop job associated with this `Scheme`.
    */
   override def sourceConfInit(
       process: FlowProcess[Properties],
@@ -112,10 +112,12 @@ class LocalKijiScheme(
   }
 
   /**
-   * Sets up any resources required to read from a Kiji table.
+   * Sets up any resources required to read from a Kiji table. This includes opening a reader,
+   * scanner, and iterator for the desired Kiji table.
    *
-   * @param process Current Cascading flow being run.
-   * @param sourceCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sourceCall contains the context for this source (which will be set to the table
+   *     reader, scanner, and iterator).
    */
   override def sourcePrepare(
       process: FlowProcess[Properties],
@@ -137,11 +139,12 @@ class LocalKijiScheme(
   }
 
   /**
-   * Reads and converts a row from a Kiji table to a Cascading Tuple. This method
-   * is called once for each row in the table.
+   * Reads and converts a row from a Kiji table to a Cascading Tuple. This method is called once
+   * per row processed in a MapReduce task.
    *
-   * @param process Current Cascading flow being run.
-   * @param sourceCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sourceCall contains the context for this source (which includes a table reader, row
+   *     scanner, and row iterator).
    * @return <code>true</code> if another row was read and it was converted to a tuple,
    *     <code>false</code> if there were no more rows to read.
    */
@@ -163,10 +166,11 @@ class LocalKijiScheme(
   }
 
   /**
-   * Cleans up any resources used to read from a Kiji table.
+   * Cleans up any resources used to read from a Kiji table. This includes closing the table
+   * reader, scanner, and iterator included with the source's context.
    *
-   * @param process Current Cascading flow being run.
-   * @param sourceCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sourceCall contains the context for this source (which includes resources to close).
    */
   override def sourceCleanup(
       process: FlowProcess[Properties],
@@ -181,9 +185,9 @@ class LocalKijiScheme(
    * Sets any configuration options that are required for running a local job
    * that writes to a Kiji table.
    *
-   * @param process Current Cascading flow being built.
-   * @param tap The tap that is being used with this scheme.
-   * @param conf The job configuration object.
+   * @param process is Cascading flow being built.
+   * @param tap that is being used with this scheme.
+   * @param conf is the configuration used by the Hadoop job associated with this `Scheme`.
    */
   override def sinkConfInit(
       process: FlowProcess[Properties],
@@ -194,10 +198,12 @@ class LocalKijiScheme(
   }
 
   /**
-   * Sets up any resources required to write to a Kiji table.
+   * Sets up any resources required to write to a Kiji table, which includes opening a writer to
+   * a Kiji table.
    *
-   * @param process Current Cascading flow being run.
-   * @param sinkCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sinkCall contains the context for this sink (which will be set to a Kiji table
+   *     writer).
    */
   override def sinkPrepare(
       process: FlowProcess[Properties],
@@ -217,10 +223,10 @@ class LocalKijiScheme(
   }
 
   /**
-   * Converts and writes a Cascading Tuple to a Kiji table.
+   * Writes data in a Cascading tuple to columns in a Kiji table.
    *
-   * @param process Current Cascading flow being run.
-   * @param sinkCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sinkCall contains the context for this sink (which includes a Kiji table writer).
    */
   override def sink(
       process: FlowProcess[Properties],
@@ -234,10 +240,11 @@ class LocalKijiScheme(
   }
 
   /**
-   * Cleans up any resources used to write to a Kiji table.
+   * Cleans up any resources used to write to a Kiji table. This includes the Kiji table writer
+   * that is part of the sink's context.
    *
-   * @param process Current Cascading flow being run.
-   * @param sinkCall Object containing the context for this source.
+   * @param process is the Cascading flow being run.
+   * @param sinkCall contains the context for this sink (which includes a Kiji table writer).
    */
   override def sinkCleanup(
       process: FlowProcess[Properties],

@@ -24,8 +24,8 @@ import org.kiji.annotations.ApiStability;
 import org.kiji.schema.KijiRowData;
 
 /**
- * Acts as a wrapper around [[KijiRowData]]. Instances of this class can be reused in MapReduce
- * jobs to wrap [[KijiRowData]] read from a Kiji table.
+ * Acts as a wrapper around `KijiRowData`. Instances of this class can be reused in MapReduce
+ * jobs to wrap `KijiRowData` read from a Kiji table.
  */
 @ApiAudience.Private
 @ApiStability.Unstable
