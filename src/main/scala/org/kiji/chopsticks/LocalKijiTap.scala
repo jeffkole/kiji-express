@@ -43,12 +43,10 @@ import org.kiji.schema.Kiji
 import org.kiji.schema.KijiURI
 
 /**
- * A [[Tap]] for reading data from a Kiji table.
- * <p>This tap is responsible for configuring a local job to read from a Kiji table.</p>
- * <p>
- *   Note: Warnings about a missing serialVersionUID are ignored here. When KijiTap is serialized,
- *   the result is not persisted anywhere making serialVersionUID unnecessary.
- * </p>
+ * A `Tap` for reading data from a Kiji table that can be used with Cascading's local runner.
+ *
+ * Note: Warnings about a missing serialVersionUID are ignored here. When KijiTap is serialized,
+ * the result is not persisted anywhere making serialVersionUID unnecessary.
  */
 @ApiAudience.Framework
 @ApiStability.Unstable
@@ -66,8 +64,8 @@ class LocalKijiTap(
    * Sets any configuration options that are required for running a local job
    * that reads from a Kiji table.
    *
-   * @param process Current Cascading flow being built.
-   * @param conf The job configuration object.
+   * @param process is the Cascading flow being built.
+   * @param conf is the configuration of the job associated with this tap.
    */
   override def sourceConfInit(
       process: FlowProcess[Properties],
@@ -82,8 +80,8 @@ class LocalKijiTap(
    * Sets any configuration options that are required for running a local job
    * that writes to a Kiji table.
    *
-   * @param process Current Cascading flow being built.
-   * @param conf The job configuration object.
+   * @param process is the Cascading flow being built.
+   * @param conf is the configuration of the job associated with this tap.
    */
   override def sinkConfInit(
       process: FlowProcess[Properties],
@@ -94,8 +92,18 @@ class LocalKijiTap(
     super.sinkConfInit(process, conf);
   }
 
+  /**
+   * @return a unique identifier for this tap, used by the Cascading flow planner.
+   */
   override def getIdentifier(): String = id
 
+  /**
+   * Opens and returns a reader for tuple entries obtained from the data store for this tap.
+   *
+   * @param process is the Cascading flow being used.
+   * @param input stream used to read data from the data source.
+   * @return an iterator over tuple entries obtained from the data store.
+   */
   override def openForRead(
       process: FlowProcess[Properties],
       input: InputStream): TupleEntryIterator = {
@@ -106,6 +114,13 @@ class LocalKijiTap(
         getIdentifier());
   }
 
+  /**
+   * Opens and returns a writer for tuple entries to be written to the data store for this tap.
+   *
+   * @param process is the Cascading flow being used.
+   * @param output stream used to output key-value pairs.
+   * @return a writer for tuple entries to be sent to the data store.
+   */
   override def openForWrite(
       process: FlowProcess[Properties],
       output: OutputStream): TupleEntryCollector = {
@@ -116,14 +131,34 @@ class LocalKijiTap(
         getIdentifier());
   }
 
+  /**
+   * Creates the data store associated with this tap. This method throws an exception because
+   * KijiChopsticks does not support creating Kiji tables as part of an analysis pipeline.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return nothing, as this method always throws an exception.
+   */
   override def createResource(jobConf: Properties): Boolean = {
     throw new UnsupportedOperationException("KijiTap does not support creating tables for you.")
   }
 
+  /**
+   * Deletes the data store associated with this tap. This method throws an exception because
+   * KijiChopsticks does not support deleting Kiji tables as part of an analysis pipeline.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return nothing, as this method always throws an exception.
+   */
   override def deleteResource(jobConf: Properties): Boolean = {
     throw new UnsupportedOperationException("KijiTap does not support deleting tables for you.")
   }
 
+  /**
+   * Determines if the resource associated with this tap (a Kiji table) exists.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return `true` if the Kiji table exists, `false` otherwise.
+   */
   override def resourceExists(jobConf: Properties): Boolean = {
     val uri: KijiURI = KijiURI.newBuilder(tableUri).build()
 
@@ -132,7 +167,13 @@ class LocalKijiTap(
     }
   }
 
-  // currently unable to find last mod time on a table.
+  /**
+   * Gets the last time the resource associated with this tap (a Kiji table) was modified.
+   * Currently, this method just returns the current time.
+   *
+   * @param jobConf is the configuration being used by a Hadoop job associated with this tap.
+   * @return the current time in milliseconds.
+   */
   override def getModifiedTime(jobConf: Properties): Long = System.currentTimeMillis()
 
   override def equals(other: Any): Boolean = {

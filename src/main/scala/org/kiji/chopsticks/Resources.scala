@@ -25,6 +25,34 @@ import org.kiji.annotations.ApiAudience
 import org.kiji.annotations.ApiStability
 import org.kiji.schema.util.ReferenceCountable
 
+/**
+ * A module containing control structures that make it easy to execute operations that depend on
+ * resources.
+ *
+ * It is a common pattern to a) initialize a resource then, b) execute some operation using the
+ * resource then finally, c) clean up the resource. This pattern can be implemented using
+ * try/catch blocks, but doing so can be cumbersome. The control structures provided here
+ * alleviate these problems.
+ *
+ * === Working with Closeable Resources ===
+ * It is common to open some closeable resource, execute an operation with that resource,
+ * and then close the resource. The function `doAndClose` simplifies implementing such a pattern.
+ * For example, to read all lines from a file using `doAndClose`:
+ * {{{
+ *   val lines = doAndClose(Source.fromFile("myFile.txt")) { theSource =>
+ *     theSource.getLines()
+ *   }
+ * }}}
+ *
+ * The first argument to `doAndClose` is a code block creating a resource that implements
+ * `Closeable`. The second argument is a function that accepts the opened resource as an argument
+ * and executes some functionality. The entire `doAndClose` expression evaluates to the result of
+ * evaluating this function on the opened resource. The resource is automatically closed by
+ * `doAndClose`.
+ *
+ * === Working with resources that can be released and retained. ===
+ *
+ */
 @ApiAudience.Public
 @ApiStability.Unstable
 object Resources {
